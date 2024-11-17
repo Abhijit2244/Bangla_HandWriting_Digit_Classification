@@ -63,24 +63,37 @@ class main:
         self.c.bind("<ButtonRelease-1>",self.getResult)
         self.c.bind("<B1-Motion>", self.paint)
     
-    def getResult(self,e):
+    def getResult(self, e):
         x = self.master.winfo_rootx() + self.c.winfo_x()
         y = self.master.winfo_rooty() + self.c.winfo_y()
         x1 = x + self.c.winfo_width()
         y1 = y + self.c.winfo_height()
-        img = PIL.ImageGrab.grab()
-        img = img.crop((x, y, x1, y1))
-        img.save("dist.png")
-        imgPath="dist.png"
-        model=load_model('BanglaModel.h5')
-        img=cv2.imread(imgPath)
-        img=np.asarray(img)
-        img=cv2.resize(img, (32,32))
-        img=preprocessing(img)
-        img=img.reshape(1, 32, 32, 1)
-        prediction=model.predict(img)
-        classIndex=model.predict_classes(img)
-        self.res=str(get_className(classIndex))
+        
+        img = PIL.ImageGrab.grab(bbox=(x, y, x1, y1))  # Capture the drawing area
+        img.save("dist.png")  # Save the captured image (optional for debugging)
+        
+        imgPath = "dist.png"
+        model = load_model('BanglaModel.h5')  # Load your trained model
+        
+        img = cv2.imread(imgPath)
+        img = np.asarray(img)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
+        img = cv2.resize(img, (32, 32))  # Resize image to 32x32 (your model input size)
+        img = img / 255.0  # Normalize the image
+        
+        img = np.expand_dims(img, axis=-1)  # Add channel dimension (if needed, for grayscale images)
+        img = np.expand_dims(img, axis=0)  # Add batch dimension (model expects a batch)
+        
+        # Get the prediction probabilities
+        predictions = model.predict(img)
+        
+        # Get the class index with the highest probability
+        classIndex = np.argmax(predictions, axis=-1)
+        
+        # Get the class name from the index
+        self.res = get_className(classIndex[0])  # Extract the class name
+        
+        # Display the result
         self.pr['text'] = "Prediction: " + self.res
 
     def clear(self):
